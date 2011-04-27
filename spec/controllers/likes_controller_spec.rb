@@ -13,7 +13,8 @@ describe LikesController do
 
     @aspect1 = @user1.aspects.first
     @aspect2 = @user2.aspects.first
-
+  
+    @controller.stub(:current_user).and_return(alice)
     sign_in :user, @user1
   end
 
@@ -65,4 +66,30 @@ describe LikesController do
       end
     end
   end
+
+ describe '#destroy' do
+    context 'your like' do
+      before do
+        @message = bob.post(:status_message, :text => "hey", :to => @aspect1.id)
+        @like = alice.build_like(true, :on => @message)
+        @like.save
+      end
+
+      it 'lets a user destroy their like' do
+        alice.should_receive(:retract).with(@like)
+        delete :destroy, :format => "js", :id => @like.id
+        response.status.should == 204
+      end
+
+      it 'does not let a user destroy other likes' do
+        like2 = eve.build_like(true, :on => @message)
+        like2.save
+
+        alice.should_not_receive(:retract)
+        delete :destroy, :format => "js", :id => like2.id
+        response.status.should == 403
+      end
+    end
+  end
+
 end
